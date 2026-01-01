@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Three.js Scene</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+
+    .color-flyout {
+      position: relative;
+    }
+
+    summary {
+      list-style: none; /* For most browsers */
+      
+      /* Apply button styles */
+      display: inline-block;
+      background-color: rgb(240, 240, 240); /* Example background color */
+      color: #000000; /* Text color */
+      padding-block: 1px;
+      padding-inline: 6px;
+      border: 1px solid rgba(0,0,0,0.5); /* Border style */
+      border-radius: 2px; 
+      text-align: center;
+      font-family: sans-serif;
+      font-size: 13.3333px;
+      text-decoration: none; /* Remove default underline if any */
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary:hover {
+      background-color: #0056b3;
+    }
+
+    /* Add a pressed effect when clicked */
+    summary:active {
+      position: relative;
+      top: 1px;
+    }
+
+    /* Button appearance */
+    .flyout-button {
+      list-style: none; /* For most browsers */
+      cursor: pointer; /* Change the cursor to a hand icon on hover */
+    }
+
+    /* Hover / active states */
+    .flyout-button:hover {
+      background: rgba(200, 200, 200, 1);
+    }
+
+    details[open] > .flyout-button {
+      background: rgba(80, 80, 80, 0.9);
+    }
+
+    /* Keyboard focus */
+    .flyout-button:focus-visible {
+      outline: 2px solid #4da3ff;
+      outline-offset: 2px;
+    }
+
+    .color-panel {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      padding: 8px;
+      background: rgba(30,30,30,0.95);
+      border-radius: 6px;
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #aaa;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+    <button id="recordButton" style="
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+    ">Record Rotation</button>
+    <button id="resetCameraButton" style="
+      position: absolute;
+      top: 50px;
+      left: 20px;
+      z-index: 10;
+    ">Reset Camera</button>
+    <button id="loadLabelButton" style="
+      position: absolute;
+      top: 80px;
+      left: 20px;
+      z-index: 10;
+    ">Add Label</button>
+    <input type="color" id="colorPicker" value="#808080" style="
+      position: absolute;
+      top: 110px;
+      left: 20px;
+      z-index: 10;">
+
+    <details class="color-flyout"style="
+    position: absolute;
+    top: 150px;
+    left: 20px;
+    z-index: 10;">
+      <summary class="flyout-button">
+        Cap Color
+      </summary>
+
+      <div class="color-panel">
+        <button class="swatch" data-color="#9ffcff" style="background:#d9d9d9"></button>
+        <button class="swatch" data-color="#ff6f6f" style="background:#000000"></button>
+        <button class="swatch" data-color="#6fff9f" style="background:#4040A0"></button>
+      </div>
+    </details>
+
+    <script type="module" src="./js/three.module.js"></script>
+    <script type="module" src="./js/OrbitControls.js"></script>
+    <script type="module" src="./js/BufferGeometryUtils.js"></script>
+    <script type="module" src="./js/GLTFLoader.js"></script>
+    <script type="module" src="./js/TDSLoader.js"></script>
+    <script type="module" src="./js/whammy.js"></script>
+    <script type="module" src="./js/index.js"></script>
+</body>
+</html>
+
