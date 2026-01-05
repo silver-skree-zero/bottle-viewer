@@ -1,24 +1,15 @@
-import * as THREE from './three.module.js';
-import { OrbitControls } from './OrbitControls.js';
-import { DecalGeometry } from './DecalGeometry.js';
-import { GLTFLoader } from './GLTFLoader.js';
-
-document.getElementById("recordButton").onclick = recordRotation;
-document.getElementById("resetCameraButton").onclick = resetCamera;
-document.getElementById("loadLabelButton").onclick = loadLabel;
-document.getElementById('colorPicker').addEventListener('input', (event) => {
-  const selectedColor = event.target.value; // e.g. "#ff8800"
-  renderer.setClearColor(selectedColor);
-});
-document.querySelectorAll("button.swatch").forEach(btn => {
-  btn.addEventListener("click", () => {
-    setCapColor(btn.style.background);
-  });
-})
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { ContrastSaturationShader } from './shader.js';
 
 var bottle = null;
 var rotationOffset = 0;
 var isRotating = false;
+var rotationBaseline = 0;
 
 var plasticMat = new THREE.MeshPhysicalMaterial({
       "color": 14483453,
@@ -120,6 +111,11 @@ loader.load('./resources/bottle 2.glb', (object) => {
 
     let texture = textureLoader.load('./resources/bottleLabel2.png', (texture) => {
       texture.flipY = false;
+      texture.generateMipmaps = false;
+      texture.minFilter = THREE.LinearFilter;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     });
 
     decalMesh = duplicateMesh(labelBody, 1.01);
@@ -169,8 +165,8 @@ loader.load('./resources/bottle 2.glb', (object) => {
     scene.add(bottle);
 });
 
-// Camera
-const camera = new THREE.PerspectiveCamera(
+  // Camera
+  const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
@@ -179,7 +175,9 @@ const camera = new THREE.PerspectiveCamera(
   camera.position.set(3, 2, 5);
   
   // Renderer
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ 
+    antialias: true
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   renderer.setClearColor(0x808080); // hex for medium gray
@@ -189,7 +187,7 @@ const camera = new THREE.PerspectiveCamera(
   renderer.physicallyCorrectLights = true;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.75;
+  renderer.toneMappingExposure = 1.15;
 
   const options = { mimeType: 'video/webm; codecs=vp9', bitsPerSecond: 10_000_000 };
   const stream = renderer.domElement.captureStream(60); // 30 FPS
@@ -257,22 +255,35 @@ const camera = new THREE.PerspectiveCamera(
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
   
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+
+  const colorPass = new ShaderPass(ContrastSaturationShader);
+  colorPass.uniforms.contrast.value = 1.08;
+  colorPass.uniforms.saturation.value = 1.15;
+
+  composer.addPass(colorPass);
+  
   // Animation loop
   function animate() {
     requestAnimationFrame(animate);
 
     controls.update();
-    renderer.render(scene, camera);
+    composer.render();
+    
+    if(bottle !== null) {
+      bottle.rotation.y = rotationBaseline;
 
-    if(isRotating) {
-      rotationOffset += 0.02
-      bottle.rotation.y = rotationOffset;
-      if (rotationOffset >= Math.PI * 2) {
-        console.log("Stopping recording");
-        recorder.stop();
-        recorder = null;
-        rotationOffset = 0;
-        isRotating = false;
+      if(isRotating) {
+        rotationOffset += 0.02
+        bottle.rotation.y = rotationBaseline + rotationOffset;
+        if (rotationOffset >= Math.PI * 2) {
+          console.log("Stopping recording");
+          recorder.stop();
+          recorder = null;
+          rotationOffset = 0;
+          isRotating = false;
+        }
       }
     }
   }
@@ -385,4 +396,48 @@ function duplicateMesh(sourceMesh, scaleOffset = 1.0) {
 
 function setCapColor(color) {
   capBody.material.color = new THREE.Color(color);
+}
+
+document.getElementById("recordButton").onclick = recordRotation;
+document.getElementById("resetCameraButton").onclick = resetCamera;
+document.getElementById("loadLabelButton").onclick = loadLabel;
+document.getElementById('colorPicker').addEventListener('input', (event) => {
+  const selectedColor = event.target.value; // e.g. "#ff8800"
+  renderer.setClearColor(selectedColor);
+});
+document.querySelectorAll("button.swatch").forEach(btn => {
+  btn.addEventListener("click", () => {
+    setCapColor(btn.style.background);
+  });
+})
+
+const fovSlider = document.getElementById('fov-slider');
+parseFloat(setFovPreserveFraming(fovSlider.value));
+fovSlider.addEventListener('input', () => {
+  parseFloat(setFovPreserveFraming(fovSlider.value));
+});
+
+const rotSlider = document.getElementById('rot-slider');
+rotationBaseline = rotSlider.value / (180 / Math.PI);
+rotSlider.addEventListener('input', () => {
+  rotationBaseline = rotSlider.value / (180 / Math.PI);
+});
+
+function setFovPreserveFraming(newFov) {
+  const oldFovRad = THREE.MathUtils.degToRad(camera.fov);
+  const newFovRad = THREE.MathUtils.degToRad(newFov);
+
+  const scale =
+    Math.tan(oldFovRad / 2) /
+    Math.tan(newFovRad / 2);
+
+  camera.fov = newFov;
+
+  camera.position
+    .sub(controls.target)
+    .multiplyScalar(scale)
+    .add(controls.target);
+
+  camera.updateProjectionMatrix();
+  controls.update();
 }

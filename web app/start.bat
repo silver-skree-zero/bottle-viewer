@@ -1,6 +1,6 @@
 @echo off
 
-set CHROME="C:\Program Files\Google\Chrome\Application\chrome.exe"
+set CHROME="C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
 
 %CHROME% ^
   --disable-web-security ^
