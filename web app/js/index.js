@@ -12,7 +12,7 @@ var isRotating = false;
 var rotationBaseline = 0;
 
 var plasticMat = new THREE.MeshPhysicalMaterial({
-      "color": 14483453,
+      "color": 16121854,
       "roughness": 0.08,
       "metalness": 0,
       "sheen": 0,
@@ -97,73 +97,9 @@ const textureLoader = new THREE.TextureLoader();
 const scene = new THREE.Scene();
 
 // === Load 3DS model ===
-const loader = new GLTFLoader();
-loader.load('./resources/bottle 2.glb', (object) => {
-    bottle = object.scene;
-
-    bottleBody = bottle.getObjectByName('bottleBody');
-    bottleBody.material = plasticMat;
-    labelBody = bottle.getObjectByName('bottleLabel');
-    labelMat = labelBody.material;
-
-    capBody = bottle.getObjectByName('bottleCap');
-    capBody.material = capMat;
-
-    let texture = textureLoader.load('./resources/bottleLabel2.png', (texture) => {
-      texture.flipY = false;
-      texture.generateMipmaps = false;
-      texture.minFilter = THREE.LinearFilter;
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    });
-
-    decalMesh = duplicateMesh(labelBody, 1.01);
-    decalMesh.material = new THREE.MeshStandardMaterial({
-      map: texture,
-      alphaTest: 0.01,    // discard pixels with alpha < 0.01
-      depthWrite: true,    // write depth for correct occlusion
-      polygonOffset: true,
-      polygonOffsetFactor: -4,
-      polygonOffsetUnits: 1,
-
-      opacity: 1.0,
-
-      transmission: 0.0,      // IMPORTANT: use alpha, not transmission
-      thickness: 0.0,
-    
-      roughness: 0.15,        // allows specular
-      metalness: 0.0,
-    
-      specularIntensity: 0.6,
-      envMapIntensity: 1.0,
-    })
-
-    decalBackingMesh = duplicateMesh(labelBody, 1.008);
-    decalBackingMesh.material = new THREE.MeshStandardMaterial({
-      map: texture,       // texture with alpha
-      color: 0xffffff,         // the solid color to show in opaque areas
-      transparent: true,
-      alphaTest: 0.01,         // omit transparent pixels entirely
-      depthWrite: false,       // so it doesn’t occlude transparent materials
-    })
-
-    labelBody.parent.add(decalMesh);
-    labelBody.parent.add(decalBackingMesh);
-
-    //bottle.scale.set(1, 1, 1);
-
-    // Center the model
-    const box = new THREE.Box3().setFromObject(bottle);
-    const center = box.getCenter(new THREE.Vector3());
-
-    bottle.position.y = -center.y
-    //bottle.rotation.y = Math.PI
-
-    labelBody.material = plasticMat;
-    
-    scene.add(bottle);
-});
+loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.png')
+//loadBottle('./resources/bottleMed.glb', './resources/bottleLabelTemplateMed.png')
+//loadBottle('./resources/bottleLarge.glb', './resources/bottleLabelTemplateLarge.png')
 
   // Camera
   const camera = new THREE.PerspectiveCamera(
@@ -379,6 +315,8 @@ function duplicateMesh(sourceMesh, scaleOffset = 1.0) {
   const box = new THREE.Box3().setFromObject(sourceMesh);
   const center = box.getCenter(new THREE.Vector3());
 
+  sourceMesh.parent.add(duplicate);
+
   // Copy local transform instead of world transform
   duplicate.position.copy(sourceMesh.position);
   duplicate.rotation.copy(sourceMesh.rotation);
@@ -386,7 +324,7 @@ function duplicateMesh(sourceMesh, scaleOffset = 1.0) {
 
   // Move target so scaling happens about the center
   duplicate.position.sub(center);
-  duplicate.scale.set(scaleOffset, 1, scaleOffset); // only scale X and Z
+  duplicate.scale.multiplyScalar(scaleOffset);
   duplicate.position.add(center);
 
   duplicate.position.set(duplicate.position.x * scaleOffset, duplicate.position.y, duplicate.position.z * scaleOffset);
@@ -440,4 +378,71 @@ function setFovPreserveFraming(newFov) {
 
   camera.updateProjectionMatrix();
   controls.update();
+}
+
+function loadBottle(modelPath, texturePath) {
+  const loader = new GLTFLoader();
+  loader.load(modelPath, (object) => {
+    bottle = object.scene;
+
+    bottleBody = bottle.getObjectByName('bottleBody');
+    bottleBody.material = plasticMat;
+    labelBody = bottle.getObjectByName('bottleLabel');
+    labelMat = labelBody.material;
+
+    capBody = bottle.getObjectByName('bottleCap');
+    capBody.material = capMat;
+
+    let texture = textureLoader.load(texturePath, (texture) => {
+      texture.flipY = false;
+      texture.generateMipmaps = false;
+      texture.minFilter = THREE.LinearFilter;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    });
+
+    decalMesh = duplicateMesh(labelBody, 1.01);
+    decalMesh.material = new THREE.MeshStandardMaterial({
+      map: texture,
+      alphaTest: 0.01,    // discard pixels with alpha < 0.01
+      depthWrite: true,    // write depth for correct occlusion
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: 1,
+
+      opacity: 1.0,
+
+      transmission: 0.0,      // IMPORTANT: use alpha, not transmission
+      thickness: 0.0,
+    
+      roughness: 0.15,        // allows specular
+      metalness: 0.0,
+    
+      specularIntensity: 0.6,
+      envMapIntensity: 1.0,
+    })
+
+    decalBackingMesh = duplicateMesh(labelBody, 1.008);
+    decalBackingMesh.material = new THREE.MeshStandardMaterial({
+      map: texture,       // texture with alpha
+      color: 0xffffff,         // the solid color to show in opaque areas
+      transparent: true,
+      alphaTest: 0.01,         // omit transparent pixels entirely
+      depthWrite: false,       // so it doesn’t occlude transparent materials
+    })
+
+    //bottle.scale.set(1, 1, 1);
+
+    // Center the model
+    const box = new THREE.Box3().setFromObject(bottle);
+    const center = box.getCenter(new THREE.Vector3());
+
+    bottle.position.y = -center.y
+    //bottle.rotation.y = Math.PI
+
+    labelBody.material = plasticMat;
+    
+    scene.add(bottle);
+  });
 }
