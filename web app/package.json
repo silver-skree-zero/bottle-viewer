@@ -13,7 +13,7 @@
   },
   "build": {
     "appId": "com.example.electronhello",
-    "productName": "HelloElectron",
+    "productName": "BottleViewer",
     "directories": {
       "output": "dist"
     },
@@ -22,7 +22,7 @@
     ],
     "win": {
       "target": [
-        "portable"
+        "nsis"
       ]
     }
   },
