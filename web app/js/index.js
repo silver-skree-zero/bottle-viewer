@@ -87,19 +87,24 @@ var labelBody = null;
 var bottleBody = null;
 var capBody = null;
 
-var decalMesh = null;
-var decalBackingMesh = null;
+var decalMeshArray = [null, null, null];
+var decalBackingMeshArray = [null, null, null];
+var bottleArray = [null, null, null];
+
+var labelHeights = [235, 213, 248];
+var labelXOffsets = [126, 154, 102];
+var labelYOffsets = [126, 217, 122]; 
+var areaHeights = [245, 333, 310];
+
+var bottleIndex = 2;
+
+
 
 // === Load label texture ===
 const textureLoader = new THREE.TextureLoader();
 
 // === Scene setup ===
 const scene = new THREE.Scene();
-
-// === Load 3DS model ===
-loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.png')
-//loadBottle('./resources/bottleMed.glb', './resources/bottleLabelTemplateMed.png')
-//loadBottle('./resources/bottleLarge.glb', './resources/bottleLabelTemplateLarge.png')
 
   // Camera
   const camera = new THREE.PerspectiveCamera(
@@ -114,6 +119,11 @@ loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.
   const renderer = new THREE.WebGLRenderer({ 
     antialias: true
   });
+  
+  // === Load 3DS model ===
+  loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.png', 0)
+  loadBottle('./resources/bottleMed.glb', './resources/bottleLabelTemplateMed.png', 1)
+  loadBottle('./resources/bottleLarge.glb', './resources/bottleLabelTemplateLarge.png', 2)
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   renderer.setClearColor(0x808080); // hex for medium gray
@@ -202,17 +212,25 @@ loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.
   
   // Animation loop
   function animate() {
+    bottleArray.forEach(bottle => {
+      if(bottle !== null) {
+        bottle.visible = false;
+      }
+    });
+    if(bottleArray[bottleIndex] !== null) {
+      bottleArray[bottleIndex].visible = true;
+    }
     requestAnimationFrame(animate);
 
     controls.update();
     composer.render();
     
-    if(bottle !== null) {
-      bottle.rotation.y = rotationBaseline;
+    if(bottleArray[bottleIndex] !== null) {
+      bottleArray[bottleIndex].rotation.y = rotationBaseline;
 
       if(isRotating) {
         rotationOffset += 0.02
-        bottle.rotation.y = rotationBaseline + rotationOffset;
+        bottleArray[bottleIndex].rotation.y = rotationBaseline + rotationOffset;
         if (rotationOffset >= Math.PI * 2) {
           console.log("Stopping recording");
           recorder.stop();
@@ -281,12 +299,35 @@ function loadLabel() {
 
       // Load as texture
       textureLoader.load(url, (texture) => {
-        texture.flipY = false; // important: set before assignment
-        decalMesh.material.map = texture;
-        decalMesh.material.needsUpdate = true;
 
-        decalBackingMesh.material.map = texture;
-        decalBackingMesh.material.needsUpdate = true;
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+
+        const ctx = canvas.getContext('2d');
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const atlasTexture = new THREE.CanvasTexture(canvas);
+        atlasTexture.colorSpace = THREE.SRGBColorSpace;
+
+        ctx.drawImage(
+          texture.image,
+          labelXOffsets[bottleIndex],
+          labelYOffsets[bottleIndex] + ((areaHeights[bottleIndex] - labelHeights[bottleIndex]) / 2),
+          texture.image.width * (labelHeights[bottleIndex] / texture.image.height),
+          labelHeights[bottleIndex]
+        );
+
+        atlasTexture.needsUpdate = true;
+        atlasTexture.flipY = false;
+
+        texture.flipY = false; // important: set before assignment
+        decalMeshArray[bottleIndex].material.map = atlasTexture;
+        decalMeshArray[bottleIndex].material.needsUpdate = true;
+
+        decalBackingMeshArray[bottleIndex].material.map = atlasTexture;
+        decalBackingMeshArray[bottleIndex].material.needsUpdate = true;
       });
     };
   
@@ -297,6 +338,18 @@ function loadLabel() {
   
   // Trigger the file browser
   fileInput.click();
+}
+
+function setSmallBottle() {
+  bottleIndex = 0;
+}
+
+function setMedBottle() {
+  bottleIndex = 1;
+}
+
+function setLargeBottle() {
+  bottleIndex = 2;
 }
 
 /**
@@ -336,6 +389,9 @@ function setCapColor(color) {
   capBody.material.color = new THREE.Color(color);
 }
 
+document.getElementById("buttonSmall").onclick = setSmallBottle;
+document.getElementById("buttonMed").onclick = setMedBottle;
+document.getElementById("buttonLarge").onclick = setLargeBottle;
 document.getElementById("recordButton").onclick = recordRotation;
 document.getElementById("resetCameraButton").onclick = resetCamera;
 document.getElementById("loadLabelButton").onclick = loadLabel;
@@ -380,7 +436,7 @@ function setFovPreserveFraming(newFov) {
   controls.update();
 }
 
-function loadBottle(modelPath, texturePath) {
+function loadBottle(modelPath, texturePath, modelIndex) {
   const loader = new GLTFLoader();
   loader.load(modelPath, (object) => {
     bottle = object.scene;
@@ -401,8 +457,7 @@ function loadBottle(modelPath, texturePath) {
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     });
-
-    decalMesh = duplicateMesh(labelBody, 1.01);
+    let decalMesh = duplicateMesh(labelBody, 1.01);
     decalMesh.material = new THREE.MeshStandardMaterial({
       map: texture,
       alphaTest: 0.01,    // discard pixels with alpha < 0.01
@@ -423,7 +478,7 @@ function loadBottle(modelPath, texturePath) {
       envMapIntensity: 1.0,
     })
 
-    decalBackingMesh = duplicateMesh(labelBody, 1.008);
+    let decalBackingMesh = duplicateMesh(labelBody, 1.008);
     decalBackingMesh.material = new THREE.MeshStandardMaterial({
       map: texture,       // texture with alpha
       color: 0xffffff,         // the solid color to show in opaque areas
@@ -444,5 +499,8 @@ function loadBottle(modelPath, texturePath) {
     labelBody.material = plasticMat;
     
     scene.add(bottle);
+    bottleArray[modelIndex] = bottle;
+    decalMeshArray[modelIndex] = decalMesh;
+    decalBackingMeshArray[modelIndex] = decalBackingMesh;
   });
 }
