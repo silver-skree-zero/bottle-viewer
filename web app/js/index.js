@@ -97,7 +97,8 @@ var labelYOffsets = [126, 217, 122];
 var areaHeights = [245, 333, 310];
 
 var bottleIndex = 2;
-
+var scaleFactor = 4;
+var textureRes = 1024;
 
 
 // === Load label texture ===
@@ -133,7 +134,7 @@ const scene = new THREE.Scene();
   renderer.physicallyCorrectLights = true;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.3;
 
   const options = { mimeType: 'video/webm; codecs=vp9', bitsPerSecond: 10_000_000 };
   const stream = renderer.domElement.captureStream(60); // 30 FPS
@@ -174,6 +175,9 @@ const scene = new THREE.Scene();
   fillLight.position.set(-6, 4, 6);
   scene.add(fillLight);
 
+  const fillLight2 = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+  scene.add(fillLight2);
+
   // Rim light (edge definition)
   const rimLight = new THREE.DirectionalLight(0xffffff, 3);
   rimLight.position.set(0, 6, -10);
@@ -188,6 +192,7 @@ const scene = new THREE.Scene();
   
   softbox.visible = false;
   scene.environment = softbox; // conceptually — HDR is still better
+  scene.environmentIntensity = 1.5;
 
   // Controls
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -301,8 +306,8 @@ function loadLabel() {
       textureLoader.load(url, (texture) => {
 
         const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 1024;
+        canvas.width = textureRes * scaleFactor;
+        canvas.height = textureRes * scaleFactor;
 
         const ctx = canvas.getContext('2d');
 
@@ -313,18 +318,29 @@ function loadLabel() {
 
         ctx.drawImage(
           texture.image,
-          labelXOffsets[bottleIndex],
-          labelYOffsets[bottleIndex] + ((areaHeights[bottleIndex] - labelHeights[bottleIndex]) / 2),
-          texture.image.width * (labelHeights[bottleIndex] / texture.image.height),
-          labelHeights[bottleIndex]
+          (labelXOffsets[bottleIndex]) * scaleFactor,
+          (labelYOffsets[bottleIndex] + ((areaHeights[bottleIndex] - labelHeights[bottleIndex]) / 2)) * scaleFactor,
+          (texture.image.width * (labelHeights[bottleIndex] / texture.image.height)) * scaleFactor,
+          (labelHeights[bottleIndex]) * scaleFactor
         );
 
         atlasTexture.needsUpdate = true;
         atlasTexture.flipY = false;
 
+        atlasTexture.minFilter = THREE.LinearMipmapLinearFilter;
+        atlasTexture.magFilter = THREE.LinearFilter;
+        atlasTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        atlasTexture.premultiplyAlpha = true;
+        atlasTexture.colorSpace = THREE.SRGBColorSpace;
+        decalMeshArray[bottleIndex].material.alphaTest = 0.5;
+        decalMeshArray[bottleIndex].material.transparent = false;
+        decalMeshArray[bottleIndex].material.envMapIntensity = 1.3;
+        decalMeshArray[bottleIndex].material.color.setRGB(1.15, 1.15, 1.15);
+
         texture.flipY = false; // important: set before assignment
         decalMeshArray[bottleIndex].material.map = atlasTexture;
         decalMeshArray[bottleIndex].material.needsUpdate = true;
+        decalMeshArray[bottleIndex].material.premultipliedAlpha = true;
 
         decalBackingMeshArray[bottleIndex].material.map = atlasTexture;
         decalBackingMeshArray[bottleIndex].material.needsUpdate = true;
