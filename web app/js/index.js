@@ -50,6 +50,45 @@ var plasticMat = new THREE.MeshPhysicalMaterial({
       "depthWrite": false
 });
 
+var plasticMatBlue = new THREE.MeshPhysicalMaterial({
+      "color": 21930,
+      "roughness": 0.08,
+      "metalness": 0,
+      "sheen": 0,
+      "sheenColor": 0,
+      "sheenRoughness": 1,
+      "emissive": 0,
+      "specularIntensity": 1,
+      "specularColor": new THREE.Color(0xffffff),
+      "clearcoat": 0.8,
+      "clearcoatRoughness": 0.04,
+      "dispersion": 0,
+      "iridescence": 0,
+      "iridescenceIOR": 1.3,
+      "iridescenceThicknessRange": [
+          100,
+          400
+      ],
+      "anisotropy": 0,
+      "anisotropyRotation": 0,
+      "envMapRotation": [
+          0,
+          0,
+          0,
+          "XYZ"
+      ],
+      "envMapIntensity": 1.4,
+      "reflectivity": 0.4591837131892669,
+      "transmission": 0,
+      "thickness": 0,
+      "attenuationColor": 16777215,
+      "side": 2,
+      "opacity": 0.29999998211860657,
+      "transparent": true,
+      "blendColor": 0,
+      "depthWrite": false
+});
+
 var capMat = new THREE.MeshPhysicalMaterial({
   color: 0xdce2dd,        // same color as before (converted to hex)
   roughness: 0.75,        // high roughness = matte
@@ -87,14 +126,14 @@ var labelBody = null;
 var bottleBody = null;
 var capBody = null;
 
-var decalMeshArray = [null, null, null];
-var decalBackingMeshArray = [null, null, null];
-var bottleArray = [null, null, null];
+var decalMeshArray = [null, null, null, null, null];
+var decalBackingMeshArray = [null, null, null, null, null];
+var bottleArray = [null, null, null, null, null];
 
-var labelHeights = [235, 213, 248];
-var labelXOffsets = [126, 154, 102];
-var labelYOffsets = [126, 217, 122]; 
-var areaHeights = [245, 333, 310];
+var labelHeights = [235, 213, 248, 248, 246];
+var labelXOffsets = [126, 154, 102, 102, 102];
+var labelYOffsets = [126, 217, 122, 122, 122]; 
+var areaHeights = [245, 333, 310, 310, 530];
 
 var bottleIndex = 2;
 var scaleFactor = 4;
@@ -122,9 +161,11 @@ const scene = new THREE.Scene();
   });
   
   // === Load 3DS model ===
-  loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.png', 0)
-  loadBottle('./resources/bottleMed.glb', './resources/bottleLabelTemplateMed.png', 1)
-  loadBottle('./resources/bottleLarge.glb', './resources/bottleLabelTemplateLarge.png', 2)
+  loadBottle('./resources/bottleSmall.glb', './resources/bottleLabelTemplateSmall.png', plasticMat, 0)
+  loadBottle('./resources/bottleMed.glb', './resources/bottleLabelTemplateMed.png', plasticMat, 1)
+  loadBottle('./resources/bottleLarge.glb', './resources/bottleLabelTemplateLarge.png', plasticMat, 2)
+  loadBottle('./resources/bottleLarge.glb', './resources/bottleLabelTemplateLarge.png', plasticMatBlue, 3)
+  loadBottle('./resources/bottleBullet.glb', './resources/bottleLabelTemplateBullet.png', plasticMat, 4)
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   renderer.setClearColor(0x808080); // hex for medium gray
@@ -368,6 +409,14 @@ function setLargeBottle() {
   bottleIndex = 2;
 }
 
+function setLargeBlueBottle() {
+  bottleIndex = 3;
+}
+
+function setBulletBottle() {
+  bottleIndex = 4;
+}
+
 /**
  * Creates a perfect world-space duplicate of a mesh
  * @param {THREE.Mesh} sourceMesh - The mesh to duplicate
@@ -408,6 +457,9 @@ function setCapColor(color) {
 document.getElementById("buttonSmall").onclick = setSmallBottle;
 document.getElementById("buttonMed").onclick = setMedBottle;
 document.getElementById("buttonLarge").onclick = setLargeBottle;
+document.getElementById("buttonLargeBlue").onclick = setLargeBlueBottle;
+document.getElementById("buttonBullet").onclick = setBulletBottle;
+
 document.getElementById("recordButton").onclick = recordRotation;
 document.getElementById("resetCameraButton").onclick = resetCamera;
 document.getElementById("loadLabelButton").onclick = loadLabel;
@@ -452,13 +504,13 @@ function setFovPreserveFraming(newFov) {
   controls.update();
 }
 
-function loadBottle(modelPath, texturePath, modelIndex) {
+function loadBottle(modelPath, texturePath, altBodyMat, modelIndex) {
   const loader = new GLTFLoader();
   loader.load(modelPath, (object) => {
     bottle = object.scene;
 
     bottleBody = bottle.getObjectByName('bottleBody');
-    bottleBody.material = plasticMat;
+    bottleBody.material = altBodyMat;
     labelBody = bottle.getObjectByName('bottleLabel');
     labelMat = labelBody.material;
 
@@ -512,7 +564,7 @@ function loadBottle(modelPath, texturePath, modelIndex) {
     bottle.position.y = -center.y
     //bottle.rotation.y = Math.PI
 
-    labelBody.material = plasticMat;
+    labelBody.material = bottleBody.material;
     
     scene.add(bottle);
     bottleArray[modelIndex] = bottle;
