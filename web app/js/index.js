@@ -132,7 +132,7 @@ var bottleArray = [null, null, null, null, null];
 
 var labelHeights = [235, 213, 248, 248, 246];
 var labelXOffsets = [126, 154, 102, 102, 102];
-var labelYOffsets = [126, 217, 122, 122, 122]; 
+var labelYOffsets = [126, 217, 122, 122, 180]; 
 var areaHeights = [245, 333, 310, 310, 530];
 
 var bottleIndex = 2;
